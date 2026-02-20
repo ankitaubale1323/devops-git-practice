@@ -134,3 +134,361 @@ git fetch upstream
 git merge upstream/main
 ```
 
+--------------------------------------------------------------------------
+
+
+# Day 24 – Advanced Git: Merge, Rebase, Stash & Cherry Pick
+
+## Task 1: Git Merge — Observations
+
+* **Fast-Forward Merge:**
+  Occurs when the branch being merged has all commits ahead of the current branch without any divergence. Git simply moves the branch pointer forward.
+  Example: `main` ➔ `feature-login` merge (no other commits in `main`) → fast-forward merge.
+
+* **Merge Commit:**
+  Happens when both branches have diverged. Git creates a new commit to combine changes.
+  Example: `main` received a commit while `feature-signup` was in progress → merging `feature-signup` created a merge commit.
+
+* **Merge Conflict:**
+  Happens when the same line in the same file was changed in both branches. Git cannot automatically merge and requires manual resolution.
+  Steps to resolve:
+
+  1. Edit the file to keep desired changes
+  2. `git add <file>`
+  3. `git commit`
+
+---
+
+## Task 2: Git Rebase — Observations
+
+* **What Rebase Does:**
+  Moves the entire branch to start from the tip of another branch (usually `main`), replaying commits one by one.
+
+* **History Comparison:**
+
+  * Merge → preserves history as a graph, showing true branch structure.
+  * Rebase → linear history; looks like all work was done sequentially on top of `main`.
+
+* **Caution:**
+  Never rebase commits that have been shared/pushed to remote. It rewrites commit hashes, causing problems for others.
+
+* **When to Use:**
+
+  * Rebase → to keep history clean and linear (feature branches, before merging to `main`).
+  * Merge → when you want to preserve branch history or for long-lived branches.
+
+---
+
+## Task 3: Squash Commit vs Merge Commit
+
+* **Squash Merge (`--squash`):**
+  Combines multiple commits from a branch into a single commit on the target branch. Useful for cleaning up small/fixup commits.
+
+* **Regular Merge:**
+  Preserves individual commits in history; shows full timeline of feature development.
+
+* **Trade-Off:**
+
+  * Squash → cleaner history, but you lose individual commit context.
+  * Merge → complete history, but can get messy with many small commits.
+
+---
+
+## Task 4: Git Stash — Observations
+
+* **Use Case:**
+  Temporarily save work-in-progress without committing, allowing branch switch.
+
+* **`git stash pop` vs `git stash apply`:**
+
+  * `pop` → applies the stash and removes it from the stash list
+  * `apply` → applies the stash but keeps it in the list
+
+* **Practical Example:**
+  Stash multiple changes:
+
+  ```
+  git stash push -m "work-in-progress login feature"
+  git stash list
+  git stash apply stash@{0}
+  git stash pop
+  ```
+
+---
+
+## Task 5: Cherry Picking — Observations
+
+* **Cherry-Pick:**
+  Apply a specific commit from one branch to another.
+
+* **Use Cases:**
+
+  * Hotfixes applied selectively
+  * Avoid merging unrelated commits
+
+* **Caution:**
+
+  * Conflicts may arise if the cherry-picked commit depends on other commits
+  * Can duplicate changes if not careful
+
+* **Example:**
+
+  ```
+  git checkout main
+  git cherry-pick <commit-hash-of-hotfix-2>
+  git log --oneline --graph
+  ```
+
+---
+
+## Key Takeaways
+
+* Merge → preserves branching history, can create merge commits.
+* Rebase → creates linear history, rewrites commit hashes, cleaner logs.
+* Squash → compresses multiple commits into one, simplifies history.
+* Stash → saves uncommitted work temporarily.
+* Cherry-pick → selectively apply commits across branches.
+
+**Tip:** Always visualize your Git history with:
+
+```
+git log --oneline --graph --all
+```
+
+It helps understand merges, rebases, and cherry-picks visually.
+
+
+
+## **Setup**
+
+Make sure you’re on your project repo:
+
+```bash
+cd devops-git-practice
+git checkout main
+git pull origin main
+```
+
+---
+
+## **Task 1: Git Merge**
+
+### Step 1 – Fast-Forward Merge
+
+```bash
+# Create and switch to feature-login
+git checkout -b feature-login
+
+# Make some changes, e.g., edit README or add a file
+echo "Login feature code" >> login.txt
+git add login.txt
+git commit -m "Add login.txt with initial content"
+
+# Add another commit
+echo "More login updates" >> login.txt
+git add login.txt
+git commit -m "Update login.txt with more content"
+
+# Switch back to main
+git checkout main
+
+# Merge feature-login
+git merge feature-login
+
+# Check history
+git log --oneline --graph --all
+```
+![alt text](image-2.png)
+ Observe: This should be a **fast-forward merge** (no merge commit).
+
+---
+
+### Step 2 – Merge Commit
+
+```bash
+# Create feature-signup branch
+git checkout -b feature-signup
+
+# Add commits
+echo "Signup feature" >> signup.txt
+git add signup.txt
+git commit -m "Add signup.txt"
+
+# Meanwhile, make a commit in main
+git checkout main
+echo "Main branch update" >> main-update.txt
+git add main-update.txt
+git commit -m "Update main branch with a new file"
+
+# Switch back and merge
+git checkout main
+git merge feature-signup
+![alt text](image-3.png)
+# Check history
+git log --oneline --graph --all
+```
+![alt text](image-4.png)
+✅ Observe: Git will create a **merge commit** this time.
+
+---
+
+### Step 3 – Merge Conflict (Optional)
+
+```bash
+# On main
+echo "Hello from main" > conflict.txt
+git add conflict.txt
+git commit -m "Edit conflict.txt on main"
+
+# On feature-signup
+git checkout feature-signup
+echo "Hello from feature-signup" > conflict.txt
+git add conflict.txt
+git commit -m "Edit conflict.txt on feature-signup"
+
+# Merge feature-signup into main
+git checkout main
+git merge feature-signup
+```
+
+* Git will throw a conflict: manually edit `conflict.txt`, then:
+![alt text](image-5.png)
+```bash
+git add conflict.txt
+git commit -m "Resolve merge conflict"
+```
+![alt text](image-6.png)
+---
+
+## **Task 2: Git Rebase**
+
+```bash
+# Create feature-dashboard branch
+git checkout -b feature-dashboard
+
+# Add 2-3 commits
+echo "Dashboard feature step 1" >> dashboard.txt
+git add dashboard.txt
+git commit -m "Dashboard commit 1"
+
+echo "Dashboard feature step 2" >> dashboard.txt
+git add dashboard.txt
+git commit -m "Dashboard commit 2"
+
+# Meanwhile, main moves ahead
+git checkout main
+echo "Main branch update for rebase" >> main-update.txt
+git add main-update.txt
+git commit -m "Main branch update"
+
+# Rebase feature-dashboard onto main
+git checkout feature-dashboard
+git rebase main
+
+# Visualize history
+git log --oneline --graph --all
+```
+![alt text](image-7.png)
+ Observe: history is **linear** now, commits from `feature-dashboard` appear on top of main.
+
+---
+
+## **Task 3: Squash Commit vs Merge Commit**
+
+```bash
+# Squash Merge
+git checkout -b feature-profile
+echo "Profile change 1" >> profile.txt
+git add profile.txt
+git commit -m "Profile commit 1"
+echo "Profile change 2" >> profile.txt
+git add profile.txt
+git commit -m "Profile commit 2"
+
+# Merge with squash
+git checkout main
+git merge --squash feature-profile
+git commit -m "Add profile feature (squashed)"
+
+# Regular merge
+git checkout -b feature-settings
+echo "Settings change 1" >> settings.txt
+git add settings.txt
+git commit -m "Settings commit 1"
+echo "Settings change 2" >> settings.txt
+git add settings.txt
+git commit -m "Settings commit 2"
+
+git checkout main
+git merge feature-settings
+```
+![alt text](image-8.png)
+ Check history:
+
+```bash
+git log --oneline --graph --all
+```
+![alt text](image-9.png)
+
+* Squash: single commit
+* Regular: multiple commits
+
+---
+
+## **Task 4: Git Stash**
+
+```bash
+# Make changes but don't commit
+echo "Work in progress" >> temp.txt
+
+# Try switching branch (Git will warn)
+git checkout main
+
+# Stash your work
+git stash push -m "WIP temp.txt changes"
+
+# Switch branch, do some work
+git checkout feature-login
+echo "Some updates" >> login.txt
+git add login.txt
+git commit -m "Update login in feature-login"
+
+# Go back and apply stash
+git checkout main
+git stash pop
+
+# List multiple stashes
+git stash list
+
+# Apply specific stash
+git stash apply stash@{0}
+```
+![alt text](image-10.png)
+
+---
+
+## **Task 5: Cherry Pick**
+
+```bash
+# Create hotfix branch
+git checkout -b feature-hotfix
+echo "Hotfix 1" >> hotfix.txt
+git add hotfix.txt
+git commit -m "Hotfix commit 1"
+echo "Hotfix 2" >> hotfix.txt
+git add hotfix.txt
+git commit -m "Hotfix commit 2"
+echo "Hotfix 3" >> hotfix.txt
+git add hotfix.txt
+git commit -m "Hotfix commit 3"
+
+# Switch to main and cherry-pick 2nd commit
+git checkout main
+git cherry-pick <commit-hash-of-hotfix-2>
+
+# Check log
+git log --oneline --graph --all
+```
+![alt text](image-11.png)
+---
+
