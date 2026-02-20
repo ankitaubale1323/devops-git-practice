@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 Hello from main
+=======
+Hello from feature-signup
+>>>>>>> feature-signup
